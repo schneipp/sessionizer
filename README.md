@@ -88,7 +88,7 @@ bind-key -r f run-shell "tmux neww sessionizer"
 Follow the on-screen instructions to create, list, and switch between tmux sessions. It’s as easy as 1-2-3! 💯
 
 🎯 Why Sessionizer?
-I built Sessionizer to bring a touch of positivity and efficiency to everyday workflows. I am very bad ad bash scripting, so hacking in the primeagens sessionizer script around wasn't ideal. No more messy scripts—just a clean, simple, and super motivating tool to help you conquer your tasks. Embrace the joy of organized sessions and let your productivity soar!
+Because my bash scripting skills are... let's just say "endearingly tragic." I tried duct-taping Primeagen’s sessionizer into my setup, but after enough rage quits and existential questions, I decided to build my own. Enter Sessionizer: the tool that’s here to sprinkle some joy and fake-it-‘til-you-make-it productivity into your daily chaos. It’s clean, simple, and won’t make you cry in your terminal (probably). So go ahead—organize your sessions, pretend you’ve got it all together, and let productivity accidentally happen.
 
 🤗 Contributing
 Contributions are welcome and celebrated! If you have ideas, improvements, or bug fixes, please open an issue or submit a pull request. Let's collaborate and make Sessionizer even more amazing together! 🌟
