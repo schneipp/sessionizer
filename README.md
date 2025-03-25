@@ -16,8 +16,15 @@ Sessionizer is a lightweight, high-performance tmux session manager written in R
 
 - **ssh sessions can be configured in a toml file!** 👍  
   ok here is actually the main feature - you can configure a session like this:
+  put the file in ~/.config/sessionizer/config.toml
 
-  ```toml
+  ```toml config.toml
+
+  [[directory]]
+  name = "~/work"
+  mindepth = "2"
+  maxdepth = "3"
+
   [[sessions]]
   name = "awesomeremotesessionname"
   protocol = "ssh"

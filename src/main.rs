@@ -12,12 +12,20 @@ use std::process::{Command, Stdio};
 
 mod find;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Config {
     sessions: Vec<SSHSession>,
+    directory: Vec<Directory>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
+struct Directory {
+    name: String,
+    mindepth: i32,
+    maxdepth: i32,
+}
+
+#[derive(Debug, Deserialize)]
 struct SSHSession {
     name: String,
     protocol: String,
@@ -26,7 +34,7 @@ struct SSHSession {
     split: Option<SplitConfig>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct SplitConfig {
     #[serde(rename = "type")]
     split_type: String, // "vs" for vertical (side-by-side) or "hs" for horizontal (stacked)
@@ -36,18 +44,40 @@ struct SplitConfig {
 fn main() {
     // Get the user's HOME directory.
     let home = env::var("HOME").expect("Could not determine HOME directory");
+    let configpath = format!("{}/.config/sessionizer/config.toml", home);
 
     // Determine the selection either from command-line argument or via fzf.
     let args: Vec<String> = env::args().collect();
     let selection: String = if args.len() == 2 {
         args[1].clone()
     } else {
-        // Get local directories from ~/work via "find".
-        let work_dir = format!("{}/work", home);
-        let local_dirs = find_dirs(&work_dir, 2);
+        let config_path = format!("{}", configpath);
+        let directories: Vec<Directory> = if Path::new(&config_path).exists() {
+            println!("Found directories in config file");
+            let config_contents =
+                fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
+            let config: Config =
+                toml::from_str(&config_contents).expect("Failed to parse TOML config");
+            println!("{:#?}", config.directory);
+            config.directory
+        } else {
+            println!("No directories found in config file");
+            Vec::new()
+        };
+
+        let mut combined = Vec::new();
+        for d in directories {
+            let dirname = if d.name.starts_with("~") {
+                format!("{}{}", home, &d.name[1..])
+            } else {
+                d.name.to_string()
+            };
+            println!("Finding directories for {}", dirname);
+            let dirs = find_dirs(&dirname, 1, d.mindepth, d.maxdepth);
+            combined.extend(dirs);
+        }
 
         // Load SSH sessions from TOML config.
-        let config_path = format!("{}/dotfiles/sshprojects.toml", home);
         let ssh_names = if Path::new(&config_path).exists() {
             let config_contents =
                 fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
@@ -63,13 +93,11 @@ fn main() {
         };
 
         // Combine local directories and SSH session names.
-        let mut combined = Vec::new();
-        combined.extend(local_dirs);
         combined.extend(ssh_names);
 
         let input = combined.join("\n");
         let options = SkimOptionsBuilder::default()
-            .header(Some("AWESOME PROJECT PICKER".to_string()))
+            .header(Some("RUSTY SESSIONIZER".to_string()))
             .reverse(true)
             .build()
             .unwrap();
@@ -100,7 +128,7 @@ fn main() {
         run_local_tmux_session(&session_name, &selection);
     } else {
         // Otherwise, assume it is an SSH session name.
-        let config_path = format!("{}/dotfiles/sshprojects.toml", home);
+        let config_path = configpath;
         let config_contents =
             fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
         let config: Config = toml::from_str(&config_contents).expect("Failed to parse TOML config");
