@@ -72,14 +72,16 @@ Getting started is as easy as pie! Follow these steps:
   cp target/release/sessionizer /usr/local/bin/
 ```
 
-🛠️ Usage
+## 🛠️ Usage
+
 Run Sessionizer with a simple command:
 
 ```bash
 sessionizer
 ```
 
-🛠️ Bonus
+## 🛠️ Bonus
+
 Add it to your .zshrc (if you use something else like bash or fish or whatever, you need to look it up yourself)
 Now you can press Ctrl+f and directly open the sessionizer:w
 
@@ -95,16 +97,20 @@ bind-key -r f run-shell "tmux neww sessionizer"
 
 Follow the on-screen instructions to create, list, and switch between tmux sessions. It’s as easy as 1-2-3! 💯
 
-🎯 Why Sessionizer?
+## 🎯 Why Sessionizer?
+
 Because my bash scripting skills are... let's just say "endearingly tragic." I tried duct-taping Primeagen’s sessionizer into my setup, but after enough rage quits and existential questions, I decided to build my own. Enter Sessionizer: the tool that’s here to sprinkle some joy and fake-it-‘til-you-make-it productivity into your daily chaos. It’s clean, simple, and won’t make you cry in your terminal (probably). So go ahead—organize your sessions, pretend you’ve got it all together, and let productivity accidentally happen.
 
-🤗 Contributing
+## 🤗 Contributing
+
 Contributions are welcome and celebrated! If you have ideas, improvements, or bug fixes, please open an issue or submit a pull request. Let's collaborate and make Sessionizer even more amazing together! 🌟
 
-📄 License
+## 📄 License
+
 Sessionizer is released under the BSD License. Feel free to use, modify, and share it as you see fit. You can even create a crypto coin from the code and make zeroes of dollars 📝
 
-🙌 Stay Connected
+## 🙌 Stay Connected
+
 If you love what you see, consider starring this project on GitHub ⭐. Your feedback, questions, or even a friendly hello are always welcome. Happy coding and keep sessionizing! 🚀💻✨
 
-Made with neovim, by schneipp
+Made with neovim, by [schneipp / rams](https://x.com/ramsleprince)
