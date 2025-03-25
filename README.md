@@ -64,6 +64,20 @@ Run Sessionizer with a simple command:
 sessionizer
 ```
 
+🛠️ Bonus
+Add it to your .zshrc (if you use something else like bash or fish or whatever, you need to look it up yourself)
+Now you can press Ctrl+f and directly open the sessionizer:w
+
+```bash .zshrc
+bindkey -s ^f "sessionizer\n"
+```
+
+And add the following to your tmux.conf
+
+```bash .tmux.conf
+bind-key -r f run-shell "tmux neww sessionizer"
+```
+
 Follow the on-screen instructions to create, list, and switch between tmux sessions. It’s as easy as 1-2-3! 💯
 
 🎯 Why Sessionizer?
