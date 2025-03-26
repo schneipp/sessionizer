@@ -4,14 +4,12 @@ use skim::prelude::Event;
 use skim::prelude::SkimItemReader;
 use skim::prelude::SkimOptionsBuilder;
 use skim::Skim;
-use skim::SkimOutput;
 use std::env;
 use std::fs;
 use std::io::Cursor;
-use std::io::{self, Write};
 use std::path::Path;
 use std::process;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 mod find;
 
@@ -47,27 +45,23 @@ struct SplitConfig {
 fn main() {
     // Get the user's HOME directory.
     let home = env::var("HOME").expect("Could not determine HOME directory");
-    let configpath = format!("{}/.config/sessionizer/config.toml", home);
+    let config_path = format!("{}/.config/sessionizer/config.toml", home);
+    let config_contents =
+        fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
+    let config: Config = toml::from_str(&config_contents).expect("Failed to parse TOML config");
+    let directories: Vec<Directory> = config.directory;
 
+    //read the sessions from the config file
+    let sessions = config
+        .sessions
+        .iter()
+        .map(|s| s.name.clone())
+        .collect::<Vec<_>>();
     // Determine the selection either from command-line argument or via fzf.
     let args: Vec<String> = env::args().collect();
     let selection: String = if args.len() == 2 {
         args[1].clone()
     } else {
-        let config_path = format!("{}", configpath);
-        let directories: Vec<Directory> = if Path::new(&config_path).exists() {
-            //println!("Found directories in config file");
-            let config_contents =
-                fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
-            let config: Config =
-                toml::from_str(&config_contents).expect("Failed to parse TOML config");
-            //println!("{:#?}", config.directory);
-            config.directory
-        } else {
-            println!("No directories found in config file");
-            Vec::new()
-        };
-
         let mut combined = Vec::new();
         for d in directories {
             let dirname = if d.name.starts_with("~") {
@@ -75,28 +69,10 @@ fn main() {
             } else {
                 d.name.to_string()
             };
-            //println!("Finding directories for {}", dirname);
             let dirs = find_dirs(&dirname, 1, d.mindepth, d.maxdepth);
             combined.extend(dirs);
         }
-
-        // Load SSH sessions from TOML config.
-        let ssh_names = if Path::new(&config_path).exists() {
-            let config_contents =
-                fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
-            let config: Config =
-                toml::from_str(&config_contents).expect("Failed to parse TOML config");
-            config
-                .sessions
-                .iter()
-                .map(|s| s.name.clone())
-                .collect::<Vec<_>>()
-        } else {
-            Vec::new()
-        };
-
-        // Combine local directories and SSH session names.
-        combined.extend(ssh_names);
+        combined.extend(sessions);
 
         let input = combined.join("\n");
         let options = SkimOptionsBuilder::default()
@@ -125,7 +101,7 @@ fn main() {
         return;
     }
 
-    // Branch: if the selection is a local directory.
+    // if the selection is a local directory.
     if Path::new(&selection).is_dir() {
         // Use the basename (with dots replaced by underscores) as the tmux session name.
         let session_name = Path::new(&selection)
@@ -136,15 +112,12 @@ fn main() {
         run_local_tmux_session(&session_name, &selection);
     } else {
         // Otherwise, assume it is an SSH session name.
-        let config_path = configpath;
-        let config_contents =
-            fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
-        let config: Config = toml::from_str(&config_contents).expect("Failed to parse TOML config");
         let session_config = config
             .sessions
             .iter()
             .find(|s| s.name == selection)
-            .expect("SSH session not found in config");
+            .expect("Invalid session name");
+
         match session_config.protocol.as_str() {
             "local" => run_local_config_session(session_config),
             "ssh" => run_ssh_tmux_session(session_config),
@@ -170,7 +143,7 @@ fn run_local_tmux_session(session_name: &str, directory: &str) {
     if !in_tmux && !tmux_running {
         // Not inside tmux and tmux is not running.
         Command::new("tmux")
-            .args(&["new-session", "-s", session_name, "-c", directory])
+            .args(["new-session", "-s", session_name, "-c", directory])
             .status()
             .expect("Failed to create tmux session");
         return;
@@ -178,14 +151,14 @@ fn run_local_tmux_session(session_name: &str, directory: &str) {
 
     // If the session does not exist, create it in detached mode.
     let session_exists = Command::new("tmux")
-        .args(&["has-session", "-t", session_name])
+        .args(["has-session", "-t", session_name])
         .status()
         .map(|s| s.success())
         .unwrap_or(false);
 
     if !session_exists {
         Command::new("tmux")
-            .args(&["new-session", "-ds", session_name, "-c", directory])
+            .args(["new-session", "-ds", session_name, "-c", directory])
             .status()
             .expect("Failed to create detached tmux session");
     }
@@ -193,12 +166,12 @@ fn run_local_tmux_session(session_name: &str, directory: &str) {
     // Attach or switch to the tmux session.
     if !in_tmux {
         Command::new("tmux")
-            .args(&["attach", "-t", session_name])
+            .args(["attach", "-t", session_name])
             .status()
             .expect("Failed to attach to tmux session");
     } else {
         Command::new("tmux")
-            .args(&["switch-client", "-t", session_name])
+            .args(["switch-client", "-t", session_name])
             .status()
             .expect("Failed to switch tmux client");
     }
@@ -217,11 +190,11 @@ fn run_local_config_session(session_config: &Session) {
 
     if !in_tmux && !tmux_running {
         Command::new("tmux")
-            .args(&["new-session", "-s", session_name])
+            .args(["new-session", "-s", session_name])
             .status()
             .expect("Failed to create tmux session");
         Command::new("tmux")
-            .args(&[
+            .args([
                 "send-keys",
                 "-t",
                 &format!("{}:0", session_name),
@@ -231,7 +204,7 @@ fn run_local_config_session(session_config: &Session) {
             .status()
             .expect("Failed to send keys to tmux session");
         Command::new("tmux")
-            .args(&["attach", "-t", session_name])
+            .args(["attach", "-t", session_name])
             .status()
             .expect("Failed to attach to tmux session");
         return;
@@ -239,18 +212,18 @@ fn run_local_config_session(session_config: &Session) {
 
     // Create session if it doesn't exist.
     let session_exists = Command::new("tmux")
-        .args(&["has-session", "-t", session_name])
+        .args(["has-session", "-t", session_name])
         .status()
         .map(|s| s.success())
         .unwrap_or(false);
 
     if !session_exists {
         Command::new("tmux")
-            .args(&["new-session", "-ds", session_name])
+            .args(["new-session", "-ds", session_name])
             .status()
             .expect("Failed to create detached tmux session");
         Command::new("tmux")
-            .args(&[
+            .args([
                 "send-keys",
                 "-t",
                 &format!("{}:0", session_name),
@@ -264,12 +237,12 @@ fn run_local_config_session(session_config: &Session) {
     // Attach or switch to the session.
     if !in_tmux {
         Command::new("tmux")
-            .args(&["attach", "-t", session_name])
+            .args(["attach", "-t", session_name])
             .status()
             .expect("Failed to attach to tmux session");
     } else {
         Command::new("tmux")
-            .args(&["switch-client", "-t", session_name])
+            .args(["switch-client", "-t", session_name])
             .status()
             .expect("Failed to switch tmux client");
     }
@@ -292,12 +265,12 @@ fn run_ssh_tmux_session(session_config: &Session) {
     // Create the session if needed.
     if !in_tmux && !tmux_running {
         Command::new("tmux")
-            .args(&["new-session", "-s", session_name, "-d", "-n", "main"])
+            .args(["new-session", "-s", session_name, "-d", "-n", "main"])
             .status()
             .expect("Failed to create tmux session");
         let ssh_cmd = format!("ssh -t {} \"{};\"", host, command);
         Command::new("tmux")
-            .args(&[
+            .args([
                 "send-keys",
                 "-t",
                 &format!("{}:main", session_name),
@@ -310,27 +283,27 @@ fn run_ssh_tmux_session(session_config: &Session) {
             create_tmux_split(session_name, host, split);
         }
         Command::new("tmux")
-            .args(&["attach", "-t", session_name])
+            .args(["attach", "-t", session_name])
             .status()
             .expect("Failed to attach to tmux session");
         return;
     }
 
     let session_exists = Command::new("tmux")
-        .args(&["has-session", "-t", session_name])
+        .args(["has-session", "-t", session_name])
         .status()
         .map(|s| s.success())
         .unwrap_or(false);
 
     if !session_exists {
         Command::new("tmux")
-            .args(&["new-session", "-ds", session_name, "-n", "main"])
+            .args(["new-session", "-ds", session_name, "-n", "main"])
             .status()
             .expect("Failed to create detached tmux session");
-        let command_escape = command.replace("'", r"\'");
-        let ssh_cmd = format!("ssh -t {} \"{};\"", host, command_escape);
+        //let command_escape = command.replace("'", r"\'");
+        let ssh_cmd = format!("ssh -t {} \"{};\"", host, command);
         Command::new("tmux")
-            .args(&[
+            .args([
                 "send-keys",
                 "-t",
                 &format!("{}:main", session_name),
@@ -349,12 +322,12 @@ fn run_ssh_tmux_session(session_config: &Session) {
 
     if !in_tmux {
         Command::new("tmux")
-            .args(&["attach", "-t", session_name])
+            .args(["attach", "-t", session_name])
             .status()
             .expect("Failed to attach to tmux session");
     } else {
         Command::new("tmux")
-            .args(&["switch-client", "-t", session_name])
+            .args(["switch-client", "-t", session_name])
             .status()
             .expect("Failed to switch tmux client");
     }
@@ -371,7 +344,7 @@ fn create_tmux_split(session_name: &str, host: &str, split: &SplitConfig) {
 
     // Get the current (main) pane ID.
     let main_pane_output = Command::new("tmux")
-        .args(&["display-message", "-p", "#{pane_id}"])
+        .args(["display-message", "-p", "#{pane_id}"])
         .output()
         .expect("Failed to get current pane id");
     let main_pane = String::from_utf8_lossy(&main_pane_output.stdout)
@@ -380,7 +353,7 @@ fn create_tmux_split(session_name: &str, host: &str, split: &SplitConfig) {
 
     // Create the split (20% of the window) in the main window.
     Command::new("tmux")
-        .args(&[
+        .args([
             "split-window",
             split_opt,
             "-p",
@@ -393,7 +366,7 @@ fn create_tmux_split(session_name: &str, host: &str, split: &SplitConfig) {
 
     // Get the new pane's ID (assumed to be the last pane).
     let list_output = Command::new("tmux")
-        .args(&[
+        .args([
             "list-panes",
             "-t",
             &format!("{}:main", session_name),
@@ -407,16 +380,15 @@ fn create_tmux_split(session_name: &str, host: &str, split: &SplitConfig) {
     let new_pane = panes.last().expect("No pane found").to_string();
 
     // Send the SSH command to the new pane.
-    let split_command_escape = split.command.replace("'", r"\'");
-    let ssh_cmd = format!("ssh -t {} \"{};\"", host, split_command_escape);
+    let ssh_cmd = format!("ssh -t {} \"{};\"", host, split.command);
     Command::new("tmux")
-        .args(&["send-keys", "-t", &new_pane, &ssh_cmd, "C-m"])
+        .args(["send-keys", "-t", &new_pane, &ssh_cmd, "C-m"])
         .status()
         .expect("Failed to send keys to split pane");
 
     // Return focus to the main pane.
     Command::new("tmux")
-        .args(&["select-pane", "-t", &main_pane])
+        .args(["select-pane", "-t", &main_pane])
         .status()
         .expect("Failed to select main pane");
 }
