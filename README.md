@@ -14,6 +14,8 @@ If you answered "yes" to any of these questions, then Sessionizer is here to res
 
 Sessionizer is a lightweight, high-performance tmux session manager written in Rust. It’s designed to help you effortlessly organize, switch, and manage your tmux sessions so you can focus on what really matters – getting things done! 🚀💡
 
+![Demo Gif](https://github.com/schneipp/sessionizer/demo.gif)
+
 ## 💡 Features
 
 - **Lightning Fast Performance** ⚡  
