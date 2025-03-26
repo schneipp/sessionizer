@@ -53,12 +53,12 @@ fn main() {
     } else {
         let config_path = format!("{}", configpath);
         let directories: Vec<Directory> = if Path::new(&config_path).exists() {
-            println!("Found directories in config file");
+            //println!("Found directories in config file");
             let config_contents =
                 fs::read_to_string(&config_path).expect("Failed to read SSH sessions config file");
             let config: Config =
                 toml::from_str(&config_contents).expect("Failed to parse TOML config");
-            println!("{:#?}", config.directory);
+            //println!("{:#?}", config.directory);
             config.directory
         } else {
             println!("No directories found in config file");
@@ -72,7 +72,7 @@ fn main() {
             } else {
                 d.name.to_string()
             };
-            println!("Finding directories for {}", dirname);
+            //println!("Finding directories for {}", dirname);
             let dirs = find_dirs(&dirname, 1, d.mindepth, d.maxdepth);
             combined.extend(dirs);
         }
@@ -138,7 +138,7 @@ fn main() {
             .find(|s| s.name == selection)
             .expect("SSH session not found in config");
         if session_config.protocol != "ssh" {
-            eprintln!(
+            println!(
                 "Invalid protocol '{}' for session '{}'",
                 session_config.protocol, session_config.name
             );
@@ -238,6 +238,7 @@ fn run_ssh_tmux_session(session_config: &SSHSession) {
         .status()
         .map(|s| s.success())
         .unwrap_or(false);
+
     if !session_exists {
         Command::new("tmux")
             .args(&["new-session", "-ds", session_name, "-n", "main"])
@@ -257,7 +258,9 @@ fn run_ssh_tmux_session(session_config: &SSHSession) {
     }
 
     if let Some(split) = &session_config.split {
-        create_tmux_split(session_name, host, split);
+        if !session_exists {
+            create_tmux_split(session_name, host, split);
+        }
     }
 
     if !in_tmux {
