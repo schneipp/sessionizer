@@ -85,7 +85,7 @@ sessionizer
 ## 🛠️ Bonus
 
 Add it to your .zshrc (if you use something else like bash or fish or whatever, you need to look it up yourself)
-Now you can press Ctrl+f and directly open the sessionizer:w
+Now you can press Ctrl+f and directly open the sessionizer
 
 ```bash .zshrc
 bindkey -s ^f "sessionizer\n"
